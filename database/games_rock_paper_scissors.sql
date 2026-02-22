@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:3306
--- Generation Time: Feb 22, 2026 at 07:07 AM
+-- Generation Time: Feb 22, 2026 at 07:18 AM
 -- Server version: 8.4.3
 -- PHP Version: 8.3.16
 
@@ -20,6 +20,8 @@ SET time_zone = "+00:00";
 --
 -- Database: `games_rock_paper_scissors`
 --
+CREATE DATABASE IF NOT EXISTS `games_rock_paper_scissors` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;
+USE `games_rock_paper_scissors`;
 
 -- --------------------------------------------------------
 
