@@ -6,7 +6,6 @@ package rpslegends;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
-import java.sql.Timestamp;
 import java.sql.ResultSet;
 import javax.swing.*;
 import java.awt.*;
@@ -20,13 +19,10 @@ import java.util.logging.Logger;
 public class Game extends javax.swing.JFrame {
 
     private int userId;
-    private String userName;
-    private int win = 0;
 
 public Game(int userId, String userName) {
     initComponents();
     this.userId = userId;
-    this.userName = userName;
     Logging(0);
 }
     
@@ -58,10 +54,8 @@ public Game(int userId, String userName) {
         int width = 100;
         int height = 100;
         Image resizedImage = originalImage.getScaledInstance(width, height, Image.SCALE_SMOOTH);
-
         ImgCPU.setIcon(new ImageIcon(resizedImage));
         ImgCPU.repaint();
-        
         System.out.println("CPU chose: " + CPUChoice);
         GLCPUChoice = CPUChoice;
         Scoring();
@@ -74,7 +68,6 @@ public Game(int userId, String userName) {
         String CPUChoice = GLCPUChoice;
         int HealthBefore = health;
         int ScoreBefore = score;
-        
         if (playerChoice.equals(CPUChoice)) {
         result = "Draw!";
         } 
@@ -98,7 +91,6 @@ public Game(int userId, String userName) {
                 
             }
         }
-        
         Announcer.setText(result);
         LabelHealth.setText("Health: " + health + "/3");
         LabelScore.setText("SCORE: " + score);
@@ -113,50 +105,40 @@ public Game(int userId, String userName) {
     }
     
     public void NameFrame() {
-    String userName = JOptionPane.showInputDialog(this, "Enter your name.");
-    if (userName != null && !userName.isEmpty()) {
-        updateNamaPengguna(userName);
-        simpanLeaderboard(score);
-        Leaderboard obj = new Leaderboard();
-        obj.setVisible(true);
-        this.dispose();
-    } else {
-        TitleScreen obj = new TitleScreen();
-        obj.setVisible(true);
-        this.dispose();
-    }
+        String FrUserName = JOptionPane.showInputDialog(this, "Enter your name.");
+        if (FrUserName != null && !FrUserName.isEmpty()) {
+            updateNamaPengguna(FrUserName);
+            simpanLeaderboard(score);
+            Leaderboard obj = new Leaderboard();
+            obj.setVisible(true);
+            this.dispose();
+        } else {
+            TitleScreen obj = new TitleScreen();
+            obj.setVisible(true);
+            this.dispose();
+        }
     }
     
     private void Logging(int act) {
         String caseAction;
-        switch (act) {
-            case 0:
-                caseAction = "Game Start";
-                break;
-            case 1:
-                caseAction = GLPlayerChoice + " VS " + GLCPUChoice;
-                break;
-            case 2:
-                caseAction = "Game over";
-                break;
-            default:
-                caseAction = "Undocumented";
-                break;
-        }
+        caseAction = switch (act) {
+            case 0 -> "Game Start";
+            case 1 -> GLPlayerChoice + " VS " + GLCPUChoice;
+            case 2 -> "Game over";
+            default -> "Undocumented";
+        };
         try {
             Connection conn = DBConnect.getConnection();
             if (conn != null) {
                 try {
                     String query = "INSERT INTO logs (id_user, action, time_stamp) VALUES (?, ?, NOW())";
-                    PreparedStatement pstmt = conn.prepareStatement(query);
-                    pstmt.setInt(1, userId);
-                    pstmt.setString(2, caseAction);
-                    pstmt.executeUpdate();
-                    pstmt.close();
+                    try (PreparedStatement pstmt = conn.prepareStatement(query)) {
+                        pstmt.setInt(1, userId);
+                        pstmt.setString(2, caseAction);
+                        pstmt.executeUpdate();
+                    }
                     conn.close();
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                }
+                } catch (SQLException e) {}
             }
         } catch (SQLException ex) {
             Logger.getLogger(Game.class.getName()).log(Level.SEVERE, null, ex);
@@ -173,15 +155,13 @@ public Game(int userId, String userName) {
                         userName = userName.substring(0, 20);
                     }
                     String query = "UPDATE users SET user_name = ? WHERE id_user = ?";
-                    PreparedStatement pstmt = conn.prepareStatement(query);
-                    pstmt.setString(1, userName);
-                    pstmt.setInt(2, userId);
-                    pstmt.executeUpdate();
-                    pstmt.close();
+                   try (PreparedStatement pstmt = conn.prepareStatement(query)) {
+                       pstmt.setString(1, userName);
+                       pstmt.setInt(2, userId);
+                       pstmt.executeUpdate();
+                   }
                     conn.close();
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                }
+                } catch (SQLException e) {}
             }
         } catch (SQLException ex) {
             Logger.getLogger(Game.class.getName()).log(Level.SEVERE, null, ex);
@@ -194,24 +174,20 @@ public Game(int userId, String userName) {
             if (conn != null) {
                 try {
                     String query = "SELECT id_user FROM users WHERE user_name = ?";
-                    PreparedStatement pstmt = conn.prepareStatement(query);
-                    pstmt.setString(1, userName);
-                    ResultSet rs = pstmt.executeQuery();
-                    
-                    if (rs.next()) {
-                        int getUserId = rs.getInt("id_user");
-                        rs.close();
-                        pstmt.close();
-                        conn.close();
-                        compareScores(getUserId);
+                    try (PreparedStatement pstmt = conn.prepareStatement(query)) {
+                        pstmt.setString(1, userName);
+                        try (ResultSet rs = pstmt.executeQuery()) {
+                            if (rs.next()) {
+                                int getUserId = rs.getInt("id_user");
+                                rs.close();
+                                pstmt.close();
+                                conn.close();
+                                compareScores(getUserId);
+                            }
+                        }
                     }
-                    
-                    rs.close();
-                    pstmt.close();
                     conn.close();
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                }
+                } catch (SQLException e) {}
             }
         } catch (SQLException ex) {
             Logger.getLogger(Game.class.getName()).log(Level.SEVERE, null, ex);
@@ -224,23 +200,21 @@ public Game(int userId, String userName) {
             if (conn != null) {
                 try {
                     String query = "SELECT score FROM leaderboard WHERE id_user = ?";
-                    PreparedStatement pstmt = conn.prepareStatement(query);
-                    pstmt.setInt(1, getUserId);
-                    ResultSet rs = pstmt.executeQuery();
-                    if (rs.next()) { 
-                        int existingScore = rs.getInt("score");
-                        if (score > existingScore) {
-                            userId = getUserId;
-                        } else {
-                           highScore = false;
+                    try (PreparedStatement pstmt = conn.prepareStatement(query)) {
+                        pstmt.setInt(1, getUserId);
+                        try (ResultSet rs = pstmt.executeQuery()) {
+                            if (rs.next()) {
+                                int existingScore = rs.getInt("score");
+                                if (score > existingScore) {
+                                    userId = getUserId;
+                                } else {
+                                    highScore = false;
+                                }
+                            }
                         }
                     }
-                    rs.close();
-                    pstmt.close();
                     conn.close();
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                }
+                } catch (SQLException e) {}
             }
         } catch (SQLException ex) {
             Logger.getLogger(Game.class.getName()).log(Level.SEVERE, null, ex);
@@ -256,18 +230,16 @@ public Game(int userId, String userName) {
                         updateLeaderboard(score);
                     } else if (highScore) {
                         String query = "INSERT INTO leaderboard (id_user, score) VALUES (?, ?)";
-                        PreparedStatement pstmt = conn.prepareStatement(query);
-                        pstmt.setInt(1, userId);
-                        pstmt.setInt(2, score);
-                        pstmt.executeUpdate();
-                        pstmt.close();
+                        try (PreparedStatement pstmt = conn.prepareStatement(query)) {
+                            pstmt.setInt(1, userId);
+                            pstmt.setInt(2, score);
+                            pstmt.executeUpdate();
+                        }
                     } else {
                         System.out.println("Error: Unknown action on leaderboard"); 
                     }
                     conn.close();
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                }
+                } catch (SQLException e) {}
             }
         } catch (SQLException ex) {
             Logger.getLogger(Game.class.getName()).log(Level.SEVERE, null, ex);
@@ -280,18 +252,16 @@ public Game(int userId, String userName) {
             if (conn != null) {
                 try {
                     String query = "SELECT id_user FROM leaderboard WHERE id_user = ?";
-                    PreparedStatement pstmt = conn.prepareStatement(query);
-                    pstmt.setInt(1, userId);
-                    ResultSet rs = pstmt.executeQuery();
-                    if (rs.next()) {
-                        return true;
+                    try (PreparedStatement pstmt = conn.prepareStatement(query)) {
+                        pstmt.setInt(1, userId);
+                        try (ResultSet rs = pstmt.executeQuery()) {
+                            if (rs.next()) {
+                                return true;
+                            }
+                        }
                     }
-                    rs.close();
-                    pstmt.close();
                     conn.close();
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                }
+                } catch (SQLException e) {}
             }
             return false;
         } catch (SQLException ex) {
@@ -307,15 +277,13 @@ public Game(int userId, String userName) {
             if (conn != null) {
                 try {
                     String query = "UPDATE leaderboard SET score = ? WHERE id_user = ?";
-                    PreparedStatement pstmt = conn.prepareStatement(query);
-                    pstmt.setInt(1, score);
-                    pstmt.setInt(2, userId);
-                    pstmt.executeUpdate();
-                    pstmt.close();
+                    try (PreparedStatement pstmt = conn.prepareStatement(query)) {
+                        pstmt.setInt(1, score);
+                        pstmt.setInt(2, userId);
+                        pstmt.executeUpdate();
+                    }
                     conn.close();
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                }
+                } catch (SQLException e) {}
             }
         } catch (SQLException ex) {
             Logger.getLogger(Game.class.getName()).log(Level.SEVERE, null, ex);
@@ -534,22 +502,16 @@ public Game(int userId, String userName) {
                     break;
                 }
             }
-        } catch (ClassNotFoundException ex) {
-            java.util.logging.Logger.getLogger(Game.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-        } catch (InstantiationException ex) {
-            java.util.logging.Logger.getLogger(Game.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-        } catch (IllegalAccessException ex) {
-            java.util.logging.Logger.getLogger(Game.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-        } catch (javax.swing.UnsupportedLookAndFeelException ex) {
+        } catch (ClassNotFoundException | InstantiationException | IllegalAccessException | javax.swing.UnsupportedLookAndFeelException ex) {
             java.util.logging.Logger.getLogger(Game.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
         }
         //</editor-fold>
+        
+        //</editor-fold>
 
         /* Create and display the form */
-        java.awt.EventQueue.invokeLater(new Runnable() {
-            public void run() {
-                new Game().setVisible(true);
-            }
+        java.awt.EventQueue.invokeLater(() -> {
+            new Game().setVisible(true);
         });
     }
 

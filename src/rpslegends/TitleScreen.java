@@ -34,13 +34,11 @@ public class TitleScreen extends javax.swing.JFrame {
             if (conn != null) {
                 try {
                     String query = "DELETE FROM users WHERE user_name = '' OR user_name IS NULL";
-                    PreparedStatement pstmt = conn.prepareStatement(query);
-                    pstmt.executeUpdate();
-                    pstmt.close();
+                    try (PreparedStatement pstmt = conn.prepareStatement(query)) {
+                        pstmt.executeUpdate();
+                    }
                     conn.close();
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                }
+                } catch (SQLException e) {}
             }   } catch (SQLException ex) {
             Logger.getLogger(Game.class.getName()).log(Level.SEVERE, null, ex);
         }
@@ -146,20 +144,17 @@ public class TitleScreen extends javax.swing.JFrame {
             if (conn != null) {
                 try {
                     String query = "INSERT INTO users (user_name) VALUES (?)";
-                    PreparedStatement pstmt = conn.prepareStatement(query, Statement.RETURN_GENERATED_KEYS);
-                    pstmt.setString(1, userName);
-                    pstmt.executeUpdate();
-                    
-                    ResultSet rs = pstmt.getGeneratedKeys();
-                    if (rs.next()) {
-                        return rs.getInt(1); // Mengembalikan userId yang baru dibuat
+                    try (PreparedStatement pstmt = conn.prepareStatement(query, Statement.RETURN_GENERATED_KEYS)) {
+                        pstmt.setString(1, userName);
+                        pstmt.executeUpdate();
+                        
+                        ResultSet rs = pstmt.getGeneratedKeys();
+                        if (rs.next()) {
+                            return rs.getInt(1); // Mengembalikan userId yang baru dibuat
+                        }
                     }
-                    
-                    pstmt.close();
                     conn.close();
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                }
+                } catch (SQLException e) {}
             }
             return -1; // Mengembalikan -1 jika gagal
         } catch (SQLException ex) {
@@ -174,19 +169,16 @@ private String dapatkanNamaPengguna(int userId) {
             if (conn != null) {
                 try {
                     String query = "SELECT user_name FROM users WHERE id_user = ?";
-                    PreparedStatement pstmt = conn.prepareStatement(query);
-                    pstmt.setInt(1, userId);
-                    ResultSet rs = pstmt.executeQuery();
-                    
-                    if (rs.next()) {
-                        return rs.getString("user_name");
+                    try (PreparedStatement pstmt = conn.prepareStatement(query)) {
+                        pstmt.setInt(1, userId);
+                        ResultSet rs = pstmt.executeQuery();
+                        
+                        if (rs.next()) {
+                            return rs.getString("user_name");
+                        }
                     }
-                    
-                    pstmt.close();
                     conn.close();
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                }
+                } catch (SQLException e) {}
             }
             return null; // Mengembalikan null jika gagal
         } catch (SQLException ex) {
@@ -238,10 +230,8 @@ private JFrame frame;
         //</editor-fold>
 
         /* Create and display the form */
-        java.awt.EventQueue.invokeLater(new Runnable() {
-            public void run() {
-                new TitleScreen().setVisible(true);
-            }
+        java.awt.EventQueue.invokeLater(() -> {
+            new TitleScreen().setVisible(true);
         });
     }
 

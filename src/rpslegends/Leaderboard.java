@@ -5,8 +5,6 @@
 package rpslegends;
 import java.sql.Connection;
 import java.sql.ResultSet;
-import java.sql.DriverManager;
-import java.sql.Statement;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import javax.swing.JOptionPane;
@@ -24,28 +22,25 @@ public class Leaderboard extends javax.swing.JFrame {
     
     private void loadData() {
        try {
-        Connection con = DBConnect.getConnection();
-        String sql = "SELECT ROW_NUMBER() OVER (ORDER BY l.score DESC) AS nomor, " +
-                    "u.user_name, l.score " +
-                    "FROM leaderboard l " +
-                    "JOIN users u ON l.id_user = u.id_user";
-        PreparedStatement pstmt = con.prepareStatement(sql);
-        ResultSet rs = pstmt.executeQuery();
-        DefaultTableModel tblModel = (DefaultTableModel) jTable1.getModel();
-        tblModel.setRowCount(0);
-        while (rs.next()) {
-            String nomor = String.valueOf(rs.getInt("nomor"));
-            String userName = rs.getString("user_name");
-            String score = String.valueOf(rs.getInt("score"));
-            Object[] tsbData = {nomor, userName, score};
-            tblModel.addRow(tsbData);
-        }
-        rs.close();
-        pstmt.close();
-        con.close();
+           try (Connection con = DBConnect.getConnection()) {
+               String sql = "SELECT ROW_NUMBER() OVER (ORDER BY l.score DESC) AS nomor, " +
+                       "u.user_name, l.score " +
+                       "FROM leaderboard l " +
+                       "JOIN users u ON l.id_user = u.id_user";
+               try (PreparedStatement pstmt = con.prepareStatement(sql); ResultSet rs = pstmt.executeQuery()) {
+                   DefaultTableModel tblModel = (DefaultTableModel) Table.getModel();
+                   tblModel.setRowCount(0);
+                   while (rs.next()) {
+                       String nomor = String.valueOf(rs.getInt("nomor"));
+                       String userName = rs.getString("user_name");
+                       String score = String.valueOf(rs.getInt("score"));
+                       Object[] tsbData = {nomor, userName, score};
+                       tblModel.addRow(tsbData);
+                   }
+               }
+           }
     } catch (SQLException e) {
         JOptionPane.showMessageDialog(this, "Error when fetching data: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
-        e.printStackTrace();
     }
     }
     @SuppressWarnings("unchecked")
@@ -55,7 +50,7 @@ public class Leaderboard extends javax.swing.JFrame {
         jLabel1 = new javax.swing.JLabel();
         BtnExit = new javax.swing.JButton();
         jScrollPane1 = new javax.swing.JScrollPane();
-        jTable1 = new javax.swing.JTable();
+        Table = new javax.swing.JTable();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
 
@@ -69,7 +64,7 @@ public class Leaderboard extends javax.swing.JFrame {
             }
         });
 
-        jTable1.setModel(new javax.swing.table.DefaultTableModel(
+        Table.setModel(new javax.swing.table.DefaultTableModel(
             new Object [][] {
                 {null, null, null},
                 {null, null, null},
@@ -77,10 +72,11 @@ public class Leaderboard extends javax.swing.JFrame {
                 {null, null, null}
             },
             new String [] {
-                "No.", "Name", "Score"
+                "Rank", "Name", "Score"
             }
         ));
-        jScrollPane1.setViewportView(jTable1);
+        Table.setShowGrid(true);
+        jScrollPane1.setViewportView(Table);
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
@@ -149,17 +145,15 @@ public class Leaderboard extends javax.swing.JFrame {
         //</editor-fold>
 
         /* Create and display the form */
-        java.awt.EventQueue.invokeLater(new Runnable() {
-            public void run() {
-                new Leaderboard().setVisible(true);
-            }
+        java.awt.EventQueue.invokeLater(() -> {
+            new Leaderboard().setVisible(true);
         });
     }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton BtnExit;
+    private javax.swing.JTable Table;
     private javax.swing.JLabel jLabel1;
     private javax.swing.JScrollPane jScrollPane1;
-    private javax.swing.JTable jTable1;
     // End of variables declaration//GEN-END:variables
 }
